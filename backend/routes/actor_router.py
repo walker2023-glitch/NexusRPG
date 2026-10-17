@@ -172,6 +172,18 @@ def _format_axiom_rules_for_prompt(ruleset: Any) -> str:
 # State resolution
 # ---------------------------------------------------------------------------
 
+def _prepare_state_for_commit(
+    state: dict[str, Any],
+    transition_operations: list[dict[str, Any]],
+    ruleset: Any,
+) -> tuple[dict[str, Any], ValidationResult]:
+    """Apply bounded transitions, then validate the proposed state with Axiom."""
+    proposed_state = apply_state_transitions(state, transition_operations)
+    validation = validate_scene_transition(state, proposed_state, ruleset)
+    final_state = validation.corrected_state if validation.corrected_state is not None else proposed_state
+    return final_state, validation
+
+
 async def _load_scene_state(parent_commit_id: str | None) -> dict[str, Any]:
     """Load the state that belongs to the requested narrative parent.
 
@@ -278,14 +290,14 @@ async def generate_scene(body: SceneRequest) -> SceneResponse:
     # 8. Apply only structured, bounded state operations. Narrative prose and
     #    choice text never mutate canonical state directly.
     try:
-        proposed_state = apply_state_transitions(state, body.transition_operations)
+        final_state, validation = _prepare_state_for_commit(
+            state, body.transition_operations, ruleset
+        )
     except TransitionError as exc:
         raise HTTPException(status_code=400, detail=f"Invalid state transition: {exc}") from exc
 
-    # 9. Axiom validation compares canonical state with the proposed state and
-    #     may return a corrected state before anything is committed.
-    validation: ValidationResult = validate_scene_transition(state, proposed_state, ruleset)
-    final_state = validation.corrected_state if validation.corrected_state is not None else proposed_state
+    # 9. Axiom validation has already compared canonical state with the proposed
+    #    state and corrected auto-fixable violations before persistence.
 
     if validation.violations:
         logger.info("actor axiom violations: %s", validation.violations)
