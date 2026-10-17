@@ -319,8 +319,11 @@ class ChronosEngine:
         return None
 
     def update_branch_tip(self, branch_name: str, commit_id: str) -> None:
-        """Point *branch_name* at *commit_id*, creating the ref file if necessary."""
+        """Point *branch_name* at an existing commit, creating the ref if needed."""
         _validate_branch_name(branch_name)
+        _validate_commit_id(commit_id)
+        if commit_id not in self._index:
+            raise ValueError(f"Cannot point branch at unknown commit: {commit_id}")
         ref_path = self._refs_dir / branch_name
         ref_path.write_text(commit_id, encoding="utf-8")
         logger.debug("chronos.update_branch_tip → %s → %s", branch_name, commit_id)
@@ -329,7 +332,7 @@ class ChronosEngine:
         """Return a lightweight metadata dict for *commit_id* without loading the full state.
 
         Keys: commit_id, parent_id, depth, branch_label, choice_taken,
-              is_snapshot, timestamp, scene_preview.
+              campaign_id, is_snapshot, timestamp, scene_preview.
         """
         meta = self._index.get(commit_id)
         if meta is None:

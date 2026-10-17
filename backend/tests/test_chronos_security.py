@@ -38,3 +38,17 @@ def test_branch_names_accept_bounded_safe_names(tmp_path: Path) -> None:
     engine.fork(root_id, "alternate-1")
     assert engine.get_branch_tip("main") == root_id
     assert engine.get_branch_tip("alternate-1") == root_id
+
+def test_branch_tip_cannot_point_to_unknown_commit(tmp_path: Path) -> None:
+    engine = ChronosEngine(tmp_path / "chronos")
+    with pytest.raises(ValueError, match="unknown commit"):
+        engine.update_branch_tip("main", "missing-commit")
+
+
+def test_malformed_branch_ref_is_rejected_on_read(tmp_path: Path) -> None:
+    engine = ChronosEngine(tmp_path / "chronos")
+    ref_path = engine._refs_dir / "main"
+    ref_path.write_text("../escape", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Invalid commit ID"):
+        engine.get_branch_tip("main")
