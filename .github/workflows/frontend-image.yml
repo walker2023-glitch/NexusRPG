@@ -1,0 +1,43 @@
+name: Frontend container image
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "frontend/**"
+      - "docker-compose.yml"
+      - ".github/workflows/frontend-image.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/nexusrpg-frontend:main
+            ghcr.io/${{ github.repository_owner }}/nexusrpg-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

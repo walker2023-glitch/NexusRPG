@@ -23,7 +23,7 @@ import useSWR, { mutate } from 'swr'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const API = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
+const API = (process.env.NEXT_PUBLIC_API_URL ?? (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : 'http://localhost:8000')).replace(/\/$/, '')
 const POLL_MS = 2500
 const STREAM_CHUNK = 14   // characters revealed per tick
 const STREAM_TICK_MS = 35 // ms between ticks → ~400 chars/s

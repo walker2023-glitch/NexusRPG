@@ -32,7 +32,7 @@ import 'reactflow/dist/style.css'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const API = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
+const API = (process.env.NEXT_PUBLIC_API_URL ?? (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : 'http://localhost:8000')).replace(/\/$/, '')
 
 const TYPE_COLOR: Record<string, string> = {
   char:    '#3B82F6',   // blue

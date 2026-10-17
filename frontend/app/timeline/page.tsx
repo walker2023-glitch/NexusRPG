@@ -29,7 +29,7 @@ import 'reactflow/dist/style.css'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const API = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
+const API = (process.env.NEXT_PUBLIC_API_URL ?? (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : 'http://localhost:8000')).replace(/\/$/, '')
 const NODE_W = 200
 const NODE_H = 72
 

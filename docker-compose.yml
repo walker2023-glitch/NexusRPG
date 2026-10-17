@@ -84,13 +84,9 @@ services:
       start_period: 20s
 
   # ── Next.js frontend ──────────────────────────────────────────────────────
+  # Built and scanned by GitHub Actions; vault only pulls the immutable runtime image.
   nexus-frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      # Nested Proxmox/LXC Docker needs this only while compiling Next/SWC.
-      # Runtime hardening remains enabled below with no-new-privileges.
-      privileged: true
+    image: ghcr.io/walker2023-glitch/nexusrpg-frontend:main
     container_name: nexus-frontend
     ports:
       - "3000:3000"
