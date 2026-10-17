@@ -11,6 +11,8 @@ WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Keep the runtime COPY deterministic when the app has no public assets yet.
+RUN mkdir -p public
 
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
@@ -22,8 +24,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser  --system --uid 1001 nextjs
+RUN addgroup --system --gid 1001 nodejs &&     adduser  --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
