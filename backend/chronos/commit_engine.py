@@ -25,6 +25,8 @@ from typing import Any
 import jsonpatch
 import zstandard as zstd
 
+from backend.world_state import validate_state
+
 logger = logging.getLogger(__name__)
 
 SNAPSHOT_INTERVAL: int = 6
@@ -276,6 +278,12 @@ class ChronosEngine:
         current_id: str | None = commit_id
         while current_id is not None:
             c = self._read_object(current_id)
+            if c.commit_id != current_id:
+                raise RuntimeError(
+                    f"Chronos object identity mismatch for commit {current_id}."
+                )
+            if c.parent_id is not None:
+                _validate_commit_id(c.parent_id)
             chain.append(c)
             if c.is_snapshot:
                 break
@@ -287,6 +295,15 @@ class ChronosEngine:
                 "the object store may be corrupt."
             )
 
+        # Validate links before applying any deltas.
+        for child, parent in zip(chain, chain[1:]):
+            if child.parent_id != parent.commit_id:
+                raise RuntimeError("Chronos parent link is inconsistent.")
+            if child.depth != parent.depth + 1:
+                raise RuntimeError("Chronos commit depth is inconsistent.")
+            if parent.campaign_id is not None and child.campaign_id != parent.campaign_id:
+                raise RuntimeError("Chronos campaign lineage is inconsistent.")
+
         # chain[-1] is the snapshot; chain[0] is the requested commit.
         state: dict[str, Any] = copy.deepcopy(chain[-1].snapshot)  # type: ignore[arg-type]
 
@@ -294,6 +311,11 @@ class ChronosEngine:
         for c in reversed(chain[:-1]):
             if c.delta:
                 state = jsonpatch.apply_patch(state, c.delta, in_place=False)
+
+        try:
+            validate_state(state)
+        except ValueError as exc:
+            raise RuntimeError("Reconstructed Chronos state failed validation.") from exc
 
         return state
 
