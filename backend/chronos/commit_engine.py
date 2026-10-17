@@ -292,6 +292,7 @@ class ChronosEngine:
 
     def get_branch_tip(self, branch_name: str) -> str | None:
         """Return the commit_id at the tip of *branch_name*, or None if the ref does not exist."""
+        _validate_branch_name(branch_name)
         ref_path = self._refs_dir / branch_name
         if ref_path.exists():
             return ref_path.read_text(encoding="utf-8").strip()
