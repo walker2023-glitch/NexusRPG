@@ -93,3 +93,13 @@ def test_architect_request_sizes_are_bounded() -> None:
 def test_import_limits_are_explicit() -> None:
     assert _MAX_IMAGE_BYTES == 10 * 1024 * 1024
     assert _MAX_TEXT_BYTES == 2 * 1024 * 1024
+
+from backend.routes.world_router import ActiveLocationUpdate, NodePropertiesUpdate
+
+
+def test_world_write_payloads_are_bounded() -> None:
+    with pytest.raises(ValidationError):
+        NodePropertiesUpdate(properties={str(i): i for i in range(65)})
+
+    with pytest.raises(ValidationError):
+        ActiveLocationUpdate(location_id="x" * 129)

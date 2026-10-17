@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend import world_state as ws
 from backend.chronos.commit_engine import ChronosEngine
@@ -22,12 +22,14 @@ router = APIRouter()
 
 class NodePropertiesUpdate(BaseModel):
     """PATCH body for updating a node's mutable properties."""
-    properties: dict[str, Any]
+    properties: dict[str, Any] = Field(
+        ..., max_length=64, description="Property values to merge into the node."
+    )
 
 
 class ActiveLocationUpdate(BaseModel):
     """PATCH body for changing the active scene location."""
-    location_id: str | None
+    location_id: str | None = Field(None, max_length=128)
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
