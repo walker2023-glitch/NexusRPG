@@ -161,6 +161,29 @@ def _format_axiom_rules_for_prompt(ruleset: Any) -> str:
 
 
 # ---------------------------------------------------------------------------
+# State resolution
+# ---------------------------------------------------------------------------
+
+async def _load_scene_state(parent_commit_id: str | None) -> dict[str, Any]:
+    """Load the state that belongs to the requested narrative parent.
+
+    A parent commit is authoritative for resumed or branched play. The global
+    world_state file is used only when starting a new root scene.
+    """
+    if parent_commit_id is None:
+        return await ws.load(settings.world_state_path)
+
+    try:
+        engine = ChronosEngine(Path(settings.chronos_path))
+        return await asyncio.to_thread(engine.reconstruct_state, parent_commit_id)
+    except (FileNotFoundError, RuntimeError) as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Parent commit not found or unreconstructable: {parent_commit_id}",
+        ) from exc
+
+
+# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
@@ -170,7 +193,7 @@ async def generate_scene(body: SceneRequest) -> SceneResponse:
     """Generate the next narrative scene in response to a player action.
 
     Pipeline:
-    1. Load world_state → resolve active_location.
+    1. Load the requested parent commit (or the root world state) and resolve active_location.
     2. Embed player_action → RAG search for location-scoped context (limit=5).
     3. Optionally compress scene history into a ≤150-word digest.
     4. Build the Freytag-stage-aware narrative prompt.
@@ -182,7 +205,7 @@ async def generate_scene(body: SceneRequest) -> SceneResponse:
     9. Return scene_text, choices, commit_id, active_location.
     """
     # 1. World state + active location
-    state = await ws.load(settings.world_state_path)
+    state = await _load_scene_state(body.parent_commit_id)
     active_location = ws.get_active_location(state) or "global"
 
     # 2. RAG context
@@ -253,7 +276,10 @@ async def generate_scene(body: SceneRequest) -> SceneResponse:
     if validation.violations:
         logger.info("actor axiom violations: %s", validation.violations)
 
-    await ws.save(settings.world_state_path, final_state)
+    # Chronos is the canonical store for this committed scene. Do not overwrite
+    # the shared world_state file here: doing so would leak one branch/campaign
+    # into another. Explicit checkout remains responsible for changing the
+    # active local view.
 
     # 9. Chronos commit
     try:
