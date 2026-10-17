@@ -50,7 +50,7 @@ make dev      # build and run frontend, API, and LLM
 | Frontend (Map / Play / Timeline) | http://localhost:3000 |
 | API | http://localhost:8000 |
 | API docs | http://localhost:8000/docs |
-| Ollama | http://localhost:11434 |
+| Ollama | Internal Docker network only |
 
 Without Make:
 
@@ -59,6 +59,27 @@ docker compose up -d nexus-llm
 docker compose --profile setup up nexus-llm-init
 docker compose up --build
 ```
+
+
+### Homelab / phone access
+
+For access from another device on your LAN or Tailscale:
+
+1. Find the host address that your phone can reach.
+2. In `.env`, set the browser-facing API URL and the exact frontend origin:
+
+```bash
+NEXT_PUBLIC_API_URL=http://<homelab-ip>:8000
+FRONTEND_ORIGINS=http://<homelab-ip>:3000
+```
+
+3. Start or recreate the stack:
+
+```bash
+docker compose up -d --build
+```
+
+Open `http://<homelab-ip>:3000` on the phone. Ollama is intentionally not published as a host port; only the API can reach it over the private Docker network.
 
 ---
 
@@ -103,7 +124,8 @@ Copy `.env.example` → `.env`. Never commit `.env`.
 | `LANCEDB_PATH` | Embedded vector DB directory |
 | `CHRONOS_PATH` | Commit graph storage |
 | `AXIOM_RULES_PATH` | JSON rule definitions |
-| `NEXT_PUBLIC_API_URL` | Browser-facing API URL (e.g. `http://localhost:8000`) |
+| `NEXT_PUBLIC_API_URL` | Browser-facing API URL (e.g. `http://localhost:8000` or your homelab IP) |
+| `FRONTEND_ORIGINS` | Comma-separated exact browser origins allowed to call the API |
 
 ---
 
