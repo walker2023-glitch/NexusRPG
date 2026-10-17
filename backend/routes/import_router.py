@@ -28,6 +28,8 @@ _JOBS: dict[str, dict[str, Any]] = {}
 
 _SSE_POLL_INTERVAL_S = 1.5
 _JOB_TTL_S = 3600  # Jobs older than 1 hour are reaped on the next status check.
+_MAX_IMAGE_BYTES = 10 * 1024 * 1024
+_MAX_TEXT_BYTES = 2 * 1024 * 1024
 
 
 def _new_job(filename: str) -> str:
@@ -191,10 +193,12 @@ async def upload_image(
     """
     _expire_old_jobs()
     filename = file.filename or "unknown.jpg"
-    file_bytes = await file.read()
+    file_bytes = await file.read(_MAX_IMAGE_BYTES + 1)
 
     if not file_bytes:
         raise HTTPException(status_code=422, detail="Uploaded file is empty.")
+    if len(file_bytes) > _MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="Image upload exceeds the 10 MiB limit.")
 
     job_id = _new_job(filename)
     background_tasks.add_task(_run_image_job, job_id, file_bytes, filename, entity_id)
@@ -216,10 +220,12 @@ async def upload_text(
     """
     _expire_old_jobs()
     filename = file.filename or "unknown.txt"
-    file_bytes = await file.read()
+    file_bytes = await file.read(_MAX_TEXT_BYTES + 1)
 
     if not file_bytes:
         raise HTTPException(status_code=422, detail="Uploaded file is empty.")
+    if len(file_bytes) > _MAX_TEXT_BYTES:
+        raise HTTPException(status_code=413, detail="Text upload exceeds the 2 MiB limit.")
 
     job_id = _new_job(filename)
     background_tasks.add_task(_run_text_job, job_id, file_bytes, filename)

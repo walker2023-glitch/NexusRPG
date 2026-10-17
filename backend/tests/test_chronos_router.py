@@ -77,3 +77,19 @@ def test_request_sizes_are_bounded() -> None:
             player_action="go",
             transition_operations=[{"op": "add", "path": "/metadata/active_location", "value": "x"}] * 33,
         )
+
+from backend.routes.architect_router import ExtractRequest, ScrapeRequest
+from backend.routes.import_router import _MAX_IMAGE_BYTES, _MAX_TEXT_BYTES
+
+
+def test_architect_request_sizes_are_bounded() -> None:
+    with pytest.raises(ValidationError):
+        ExtractRequest(raw_text="x" * 100_001)
+
+    with pytest.raises(ValidationError):
+        ScrapeRequest(url="https://example.com", universe_context="x" * 2_001)
+
+
+def test_import_limits_are_explicit() -> None:
+    assert _MAX_IMAGE_BYTES == 10 * 1024 * 1024
+    assert _MAX_TEXT_BYTES == 2 * 1024 * 1024

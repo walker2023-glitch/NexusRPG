@@ -45,9 +45,12 @@ def _instructor_client() -> instructor.AsyncInstructor:
 class ExtractRequest(BaseModel):
     """Payload for the /extract endpoint."""
 
-    raw_text: str = Field(..., min_length=1, description="Narrative or descriptive text to analyse.")
+    raw_text: str = Field(
+        ..., min_length=1, max_length=100_000, description="Narrative or descriptive text to analyse."
+    )
     universe_context: str = Field(
         default="",
+        max_length=2_000,
         description="Optional one-liner describing the world setting for disambiguation.",
     )
 
@@ -65,7 +68,9 @@ class ScrapeRequest(BaseModel):
     """Payload for the /scrape endpoint."""
 
     url: HttpUrl = Field(..., description="Publicly accessible URL to crawl and extract from.")
-    universe_context: str = Field(default="", description="Optional world-setting context hint.")
+    universe_context: str = Field(
+        default="", max_length=2_000, description="Optional world-setting context hint."
+    )
 
 
 class ScrapeResponse(BaseModel):
