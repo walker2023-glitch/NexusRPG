@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from backend import llm_client, rag, world_state as ws
 from backend.axiom.engine import ValidationResult, load_ruleset, validate_scene_transition
 from backend.chronos.commit_engine import ChronosEngine
+from backend.chronos.transitions import TransitionError, apply_state_transitions
 from backend.config import settings
 from backend.prompts.actor_mode import (
     FreytagStage,
@@ -51,6 +52,13 @@ class SceneRequest(BaseModel):
     scene_history: list[str] = Field(
         default_factory=list,
         description="Ordered list of prior scene texts (oldest first) for compression.",
+    )
+    transition_operations: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Structured, allowlisted state operations from a trusted planner. "
+            "Narrative prose is never treated as a state mutation."
+        ),
     )
 
 
@@ -267,11 +275,17 @@ async def generate_scene(body: SceneRequest) -> SceneResponse:
     if missing:
         logger.warning("actor scene: missing choices %s in LLM output", missing)
 
-    # 8. Axiom validation — validate state against itself after narrative generation.
-    #    In Actor mode the LLM cannot directly mutate state; validation catches any
-    #    pre-existing violations so they are corrected before the commit is recorded.
-    validation: ValidationResult = validate_scene_transition(state, state, ruleset)
-    final_state = validation.corrected_state if validation.corrected_state is not None else state
+    # 8. Apply only structured, bounded state operations. Narrative prose and
+    #    choice text never mutate canonical state directly.
+    try:
+        proposed_state = apply_state_transitions(state, body.transition_operations)
+    except TransitionError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid state transition: {exc}") from exc
+
+    # 9. Axiom validation compares canonical state with the proposed state and
+    #     may return a corrected state before anything is committed.
+    validation: ValidationResult = validate_scene_transition(state, proposed_state, ruleset)
+    final_state = validation.corrected_state if validation.corrected_state is not None else proposed_state
 
     if validation.violations:
         logger.info("actor axiom violations: %s", validation.violations)
@@ -281,7 +295,7 @@ async def generate_scene(body: SceneRequest) -> SceneResponse:
     # into another. Explicit checkout remains responsible for changing the
     # active local view.
 
-    # 9. Chronos commit
+    # 10. Chronos commit
     try:
         engine = ChronosEngine(Path(settings.chronos_path))
         commit_id = await asyncio.to_thread(
