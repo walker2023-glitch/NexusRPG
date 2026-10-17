@@ -199,8 +199,8 @@ async def generate_scene(body: SceneRequest) -> SceneResponse:
     4. Build the Freytag-stage-aware narrative prompt.
     5. Call Ollama (mistral:7b) with the stage temperature.
     6. Parse CHOICE_A/B/C from the response.
-    7. Run the Axiom engine — auto-correct any NumericCap/StatusImmutable violations,
-       persist the (possibly corrected) state.
+    7. Run the Axiom engine — auto-correct any NumericCap/StatusImmutable violations;
+       keep the resulting state in the Chronos commit without overwriting global state.
     8. Commit scene + state to Chronos.
     9. Return scene_text, choices, commit_id, active_location.
     """
