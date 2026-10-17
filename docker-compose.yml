@@ -88,6 +88,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      # Nested Proxmox/LXC Docker needs this only while compiling Next/SWC.
+      # Runtime hardening remains enabled below with no-new-privileges.
+      privileged: true
     container_name: nexus-frontend
     ports:
       - "3000:3000"
