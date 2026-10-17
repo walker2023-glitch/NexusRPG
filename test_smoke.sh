@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # Ensure the script exits immediately if any command fails
-set -e
+set -euo pipefail
+
+BASE_URL="${BASE_URL:-${BASE_URL}}"
 
 echo "========================================="
 echo "   NEXUS ENGINE ENGINE SMOKE TEST        "
@@ -9,11 +11,11 @@ echo "========================================="
 echo ""
 
 echo "=== 1. CHECKING SYSTEM HEALTH ==="
-curl -s http://localhost:8000/health | python3 -m json.tool
+curl --fail-with-body -sS ${BASE_URL}/health | python3 -m json.tool
 echo ""
 
 echo "=== 2. TESTING ARCHITECT MODE (GRAPH EXTRACTION) ==="
-curl -s -X POST http://localhost:8000/architect/extract \
+curl --fail-with-body -sS -X POST ${BASE_URL}/architect/extract \
   -H "Content-Type: application/json" \
   -d '{
     "raw_text": "Tony Stark is a genius billionaire who built the Iron Man suit. He is allied with Steve Rogers and lives in Stark Tower in New York.",
@@ -22,11 +24,11 @@ curl -s -X POST http://localhost:8000/architect/extract \
 echo ""
 
 echo "=== 3. VERIFYING WORLD STATE PERSISTENCE ==="
-curl -s http://localhost:8000/api/world-state | python3 -m json.tool
+curl --fail-with-body -sS ${BASE_URL}/api/world-state | python3 -m json.tool
 echo ""
 
 echo "=== 4. TESTING ACTOR MODE (RPG INITIALIZATION) ==="
-curl -s -X POST http://localhost:8000/actor/scene \
+curl --fail-with-body -sS -X POST ${BASE_URL}/actor/scene \
   -H "Content-Type: application/json" \
   -d '{
     "player_action": "Look around the room and assess the situation.",
@@ -36,7 +38,7 @@ curl -s -X POST http://localhost:8000/actor/scene \
 echo ""
 
 echo "=== 5. VERIFYING CHRONOS TIMELINE COMMIT ==="
-curl -s http://localhost:8000/chronos/timeline | python3 -m json.tool
+curl --fail-with-body -sS ${BASE_URL}/chronos/timeline | python3 -m json.tool
 echo ""
 
 echo "========================================="
