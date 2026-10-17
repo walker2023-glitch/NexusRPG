@@ -495,6 +495,13 @@ export default function PlayPage() {
           freytag_stage: stage,
           parent_commit_id: parentCommitId,
           scene_history: history,
+          transition_operations: activeLocation
+            ? [{
+                op: 'add',
+                path: '/metadata/active_location',
+                value: activeLocation,
+              }]
+            : [],
         }),
       })
       if (!res.ok) throw new Error(await res.text())
@@ -539,7 +546,7 @@ export default function PlayPage() {
       setGenerating(false)
       setCustomAction('')
     }
-  }, [generating, stage, parentCommitId, scenes, addToast])
+  }, [generating, stage, parentCommitId, scenes, activeLocation, addToast])
 
   // ─── Choice / submit handlers ─────────────────────────────────────────────
 
