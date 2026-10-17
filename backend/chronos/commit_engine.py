@@ -15,6 +15,7 @@ import copy
 import json
 import logging
 import os
+import re
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -30,6 +31,16 @@ SNAPSHOT_INTERVAL: int = 6
 
 _ZSTD_LEVEL = 3
 _SCENE_PREVIEW_LEN = 120
+_BRANCH_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+
+
+def _validate_branch_name(branch_name: str) -> None:
+    """Reject unsafe branch names before using them as ref filenames."""
+    if not _BRANCH_NAME_RE.fullmatch(branch_name) or branch_name in {".", ".."}:
+        raise ValueError(
+            "Invalid branch name: use 1-64 characters from letters, numbers, "
+            "dot, underscore, or hyphen; it must start with a letter or number."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -272,6 +283,7 @@ class ChronosEngine:
         This is a zero-copy operation — no commit objects are duplicated.
         Returns *from_commit_id* unchanged so callers can chain the result.
         """
+        _validate_branch_name(branch_name)
         if from_commit_id not in self._index:
             raise ValueError(f"Cannot fork from unknown commit: {from_commit_id}")
         self.update_branch_tip(branch_name, from_commit_id)
@@ -287,6 +299,7 @@ class ChronosEngine:
 
     def update_branch_tip(self, branch_name: str, commit_id: str) -> None:
         """Point *branch_name* at *commit_id*, creating the ref file if necessary."""
+        _validate_branch_name(branch_name)
         ref_path = self._refs_dir / branch_name
         ref_path.write_text(commit_id, encoding="utf-8")
         logger.debug("chronos.update_branch_tip → %s → %s", branch_name, commit_id)
