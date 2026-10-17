@@ -95,3 +95,12 @@ def test_reconstruction_rejects_campaign_lineage_tampering(tmp_path: Path) -> No
 
     with pytest.raises(RuntimeError, match="campaign lineage"):
         engine.reconstruct_state(child_id)
+
+
+def test_corrupted_index_fails_closed(tmp_path: Path) -> None:
+    storage = tmp_path / "chronos"
+    storage.mkdir()
+    (storage / "index.json").write_text("{not-json", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="index is corrupted"):
+        ChronosEngine(storage)

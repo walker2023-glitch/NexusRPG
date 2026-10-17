@@ -144,7 +144,8 @@ class ChronosEngine:
             try:
                 return json.loads(self._index_path.read_text(encoding="utf-8"))
             except json.JSONDecodeError as exc:
-                logger.error("chronos index.json corrupted: %s — starting fresh", exc)
+                logger.error("chronos index.json corrupted: %s", exc)
+                raise RuntimeError("Chronos index is corrupted; refusing to start with an empty index.") from exc
         return {}
 
     def _save_index(self) -> None:
