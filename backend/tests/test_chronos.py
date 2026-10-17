@@ -144,6 +144,28 @@ def test_snapshot_at_snapshot_interval(tmp_engine: ChronosEngine, base_state: di
         parent = cid
 
 
+def test_campaign_id_is_preserved_in_metadata(tmp_engine: ChronosEngine) -> None:
+    state = {"metadata": {"campaign_id": "campaign-a"}}
+    commit_id = tmp_engine.commit("Campaign A.", state)
+    assert tmp_engine.get_commit_metadata(commit_id)["campaign_id"] == "campaign-a"
+
+
+def test_campaign_cannot_attach_to_parent_from_another_campaign(
+    tmp_engine: ChronosEngine,
+) -> None:
+    parent_id = tmp_engine.commit(
+        "Campaign A root.",
+        {"metadata": {"campaign_id": "campaign-a"}},
+    )
+
+    with pytest.raises(ValueError, match="Campaign mismatch"):
+        tmp_engine.commit(
+            "Campaign B child.",
+            {"metadata": {"campaign_id": "campaign-b"}},
+            parent_id=parent_id,
+        )
+
+
 # ─── reconstruct_state ────────────────────────────────────────────────────────
 
 

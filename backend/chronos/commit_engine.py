@@ -71,6 +71,7 @@ class ChronosCommit:
     timestamp: float
     branch_label: str | None = None
     choice_taken: str | None = None
+    campaign_id: str | None = None
     snapshot: dict | None = None
     delta: list | None = None
 
@@ -158,6 +159,7 @@ class ChronosEngine:
             "depth": commit.depth,
             "branch_label": commit.branch_label,
             "choice_taken": commit.choice_taken,
+            "campaign_id": commit.campaign_id,
             "is_snapshot": commit.is_snapshot,
             "timestamp": commit.timestamp,
             "scene_preview": commit.scene_text[:_SCENE_PREVIEW_LEN],
@@ -203,14 +205,22 @@ class ChronosEngine:
         ``SNAPSHOT_INTERVAL - 1`` patch applications.
         """
         commit_id = str(uuid.uuid4())
+        campaign_id = current_world_state.get("metadata", {}).get("campaign_id")
+        if campaign_id is not None and not isinstance(campaign_id, str):
+            raise ValueError("campaign_id must be a string when present in state metadata")
 
-        # Resolve depth from the parent's indexed depth.
+        # Resolve depth from the parent's indexed depth and enforce campaign isolation.
         parent_depth = -1
         if parent_id is not None:
             parent_meta = self._index.get(parent_id)
             if parent_meta is None:
                 raise ValueError(f"Unknown parent commit: {parent_id}")
             parent_depth = parent_meta["depth"]
+            parent_campaign_id = parent_meta.get("campaign_id")
+            if parent_campaign_id is not None and campaign_id != parent_campaign_id:
+                raise ValueError(
+                    "Campaign mismatch: child state cannot attach to a parent from another campaign."
+                )
         depth = parent_depth + 1
 
         use_snapshot = (parent_id is None) or (depth % SNAPSHOT_INTERVAL == 0)
@@ -224,6 +234,7 @@ class ChronosEngine:
                 timestamp=time.time(),
                 branch_label=branch_label,
                 choice_taken=choice_taken,
+                campaign_id=campaign_id,
                 snapshot=copy.deepcopy(current_world_state),
                 delta=None,
             )
@@ -239,6 +250,7 @@ class ChronosEngine:
                 timestamp=time.time(),
                 branch_label=branch_label,
                 choice_taken=choice_taken,
+                campaign_id=campaign_id,
                 snapshot=None,
                 delta=patch.patch,
             )
