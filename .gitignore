@@ -1,0 +1,29 @@
+# Secrets
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Node / Next.js
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+npm-debug.log*
+
+# Runtime data (Docker volumes)
+data/lancedb/
+data/chronos/
+models/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

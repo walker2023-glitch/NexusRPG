@@ -1,0 +1,71 @@
+# .cursorrules — Nexus RPG Engine
+
+## Project Identity
+Local-first, CPU-only AI RPG Engine. Two modes: Architect (knowledge graph builder)
+and Actor (interactive narrative). Runs on homelab hardware via docker-compose.
+
+## Hard Constraints — NEVER violate these
+- NO cloud services, hosted APIs, or managed databases of any kind
+- NO GPU/CUDA code. All inference runs on CPU via Ollama GGUF models
+- NO OpenAI, Pinecone, AWS, Azure, Chroma, Weaviate, or any SaaS alternative
+- Models in use: mistral:7b or llama3.1:8b (Q4_K_M), llava:7b, nomic-embed-text
+- Target CPU: Intel Xeon E3 class. Always minimize blocking operations
+
+## Stack
+- Frontend: Next.js 14 (App Router), React, React Flow, Tailwind CSS, TypeScript
+- Backend: FastAPI (Python 3.11+), async throughout, Pydantic v2
+- LLM Calls: httpx → Ollama REST API. Use instructor library for structured JSON output
+- Vector DB: LanceDB embedded (no server process). Always filter by location_key metadata
+- State: world_state.json is the single source of graph truth (nodes + edges)
+- Branching: Chronos engine — ZSTD-compressed RFC 6902 JSON Patch delta commits
+- Deployment: docker-compose with named volumes, bridge network
+
+## Directory Layout
+nexus-engine/
+├── backend/
+│   ├── main.py               # FastAPI app, lifespan, CORS
+│   ├── config.py             # Pydantic Settings (reads .env)
+│   ├── llm_client.py         # Ollama HTTP wrapper (generate, embed, vision)
+│   ├── world_state.py        # Async read/write helpers for world_state.json
+│   ├── rag.py                # LanceDB wrapper with metadata-filtered search
+│   ├── routes/
+│   │   ├── architect_router.py
+│   │   ├── actor_router.py
+│   │   ├── chronos_router.py
+│   │   └── import_router.py
+│   ├── chronos/
+│   │   └── commit_engine.py  # ChronosEngine, ChronosCommit dataclass
+│   ├── pipeline/
+│   │   └── import_pipeline.py  # Vision + text import, async with Semaphore
+│   ├── axiom/
+│   │   └── engine.py         # Deterministic constraint validator (NO LLM calls)
+│   └── prompts/
+│       ├── architect_mode.py
+│       ├── actor_mode.py     # FreytagStage, injectors, temperatures
+│       └── vision_mode.py
+├── frontend/
+│   ├── app/
+│   │   ├── map/page.tsx      # React Flow mind map
+│   │   ├── play/page.tsx     # Actor mode chat + Freytag UI
+│   │   └── timeline/page.tsx # Chronos DAG branch viewer
+│   └── components/
+├── data/                     # gitignored — Docker volume mount target
+│   ├── world_state.json
+│   ├── lancedb/
+│   └── chronos/
+└── docker-compose.yml
+
+## Code Rules
+- Every Python function that touches I/O must be async
+- Never block the asyncio event loop. Use asyncio.to_thread() for sync libs (LanceDB, PIL)
+- Return 202 + job_id immediately for any operation >1 second. Use BackgroundTasks + SSE
+- All Ollama calls go through llm_client.py, never raw httpx in route handlers
+- LanceDB queries MUST include a WHERE location_key filter. Never do unfiltered vector scans
+- Pydantic v2 models for all request/response bodies. Use Field(pattern=...) for IDs
+- Node IDs: snake_case with type prefix: char_ | loc_ | item_ | org_ | event_ | concept_
+
+## When generating code
+- Write complete, runnable files — no placeholder TODOs or stub functions
+- Include all imports at the top of each file
+- Use Python logging, never print()
+- Add a brief docstring to every class and public function

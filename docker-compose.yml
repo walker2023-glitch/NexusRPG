@@ -1,0 +1,114 @@
+version: "3.9"
+
+services:
+  # ── Model bootstrap (run once with: make setup) ───────────────────────────
+  nexus-llm-init:
+    image: ollama/ollama:latest
+    container_name: nexus-llm-init
+    profiles:
+      - setup
+    environment:
+      - OLLAMA_HOST=http://nexus-llm:11434
+    entrypoint: >
+      sh -c "
+        echo '=== Nexus LLM Init: waiting for Ollama to be ready ===' &&
+        until curl -sf http://nexus-llm:11434/api/tags; do sleep 2; done &&
+        echo '=== Pulling mistral:7b ===' &&
+        ollama pull mistral:7b &&
+        echo '=== Pulling nomic-embed-text ===' &&
+        ollama pull nomic-embed-text &&
+        echo '=== Pulling llava:7b ===' &&
+        ollama pull llava:7b &&
+        echo '=== All models ready. ===' "
+    depends_on:
+      nexus-llm:
+        condition: service_healthy
+    networks:
+      - nexus_bridge
+
+  # ── Ollama inference server ───────────────────────────────────────────────
+  nexus-llm:
+    image: ollama/ollama:latest
+    container_name: nexus-llm
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_FLASH_ATTENTION=1
+    volumes:
+      - ./models:/models:ro
+    networks:
+      - nexus_bridge
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── FastAPI backend ───────────────────────────────────────────────────────
+  nexus-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nexus-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - OLLAMA_URL=http://nexus-llm:11434
+      - WORLD_STATE_PATH=/data/world_state.json
+      - LANCEDB_PATH=/data/lancedb
+      - CHRONOS_PATH=/data/chronos
+      - AXIOM_RULES_PATH=/data/axiom_rules.json
+    volumes:
+      - nexus-lancedb:/data/lancedb
+      - nexus-chronos:/data/chronos
+      - ./data:/data
+    depends_on:
+      nexus-llm:
+        condition: service_healthy
+    networks:
+      - nexus_bridge
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # ── Next.js frontend ──────────────────────────────────────────────────────
+  nexus-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nexus-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      nexus-api:
+        condition: service_healthy
+    networks:
+      - nexus_bridge
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  nexus-lancedb:
+    driver: local
+  nexus-chronos:
+    driver: local
+
+networks:
+  nexus_bridge:
+    driver: bridge

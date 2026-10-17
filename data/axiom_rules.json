@@ -1,0 +1,26 @@
+{
+  "numeric_cap_rules": [
+    {
+      "entity_id": "char_player",
+      "property_path": "properties.health",
+      "min_val": 0,
+      "max_val": 100,
+      "comment": "Player health is always clamped to [0, 100]. Healing potions cannot exceed 100; damage cannot go below 0."
+    }
+  ],
+  "status_immutable_rules": [
+    {
+      "entity_id": "char_baron_aldric",
+      "locked_status": "dead",
+      "comment": "Baron Aldric was slain in the Siege of Thornwall. Once dead, resurrection is impossible — downstream plot nodes depend on his permanent absence."
+    }
+  ],
+  "location_bound_rules": [
+    {
+      "item_id": "item_vault_key",
+      "allowed_location_ids": ["loc_thornwall_citadel", "loc_citadel_vault_anteroom"],
+      "comment": "The Vault Key is a physical object bolted to the citadel. It can only be used or examined inside the citadel or its vault anteroom. Carrying it to another location is a hard violation."
+    }
+  ],
+  "item_count_rules": []
+}
