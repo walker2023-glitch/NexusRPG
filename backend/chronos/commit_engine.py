@@ -32,6 +32,13 @@ SNAPSHOT_INTERVAL: int = 6
 _ZSTD_LEVEL = 3
 _SCENE_PREVIEW_LEN = 120
 _BRANCH_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+_COMMIT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
+
+
+def _validate_commit_id(commit_id: str) -> None:
+    """Reject unsafe commit IDs before using them as object filenames."""
+    if not isinstance(commit_id, str) or _COMMIT_ID_RE.fullmatch(commit_id) is None:
+        raise ValueError("Invalid commit ID.")
 
 
 def _validate_branch_name(branch_name: str) -> None:
@@ -161,6 +168,7 @@ class ChronosEngine:
     # ------------------------------------------------------------------
 
     def _object_path(self, commit_id: str) -> Path:
+        _validate_commit_id(commit_id)
         return self._objects_dir / commit_id
 
     def _write_object(self, commit: ChronosCommit) -> None:

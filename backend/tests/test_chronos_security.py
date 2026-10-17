@@ -7,6 +7,14 @@ import pytest
 from backend.chronos.commit_engine import ChronosEngine
 
 
+def test_commit_ids_cannot_escape_objects_directory(tmp_path: Path) -> None:
+    engine = ChronosEngine(tmp_path / "chronos")
+
+    for unsafe_id in ("../outside", "..", "/absolute", "nested/id", ""):
+        with pytest.raises(ValueError, match="Invalid commit ID"):
+            engine.reconstruct_state(unsafe_id)
+
+
 def test_branch_names_cannot_escape_refs_directory(tmp_path: Path) -> None:
     engine = ChronosEngine(tmp_path / "chronos")
     root_id = engine.commit("Root.", {"metadata": {}})
