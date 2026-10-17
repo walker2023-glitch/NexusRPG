@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ── Model bootstrap (run once with: make setup) ───────────────────────────
   nexus-llm-init:
@@ -12,7 +10,7 @@ services:
     entrypoint: >
       sh -c "
         echo '=== Nexus LLM Init: waiting for Ollama to be ready ===' &&
-        until curl -sf http://nexus-llm:11434/api/tags; do sleep 2; done &&
+        until ollama list >/dev/null 2>&1; do sleep 2; done &&
         echo '=== Pulling mistral:7b ===' &&
         ollama pull mistral:7b &&
         echo '=== Pulling nomic-embed-text ===' &&
