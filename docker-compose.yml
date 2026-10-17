@@ -30,8 +30,7 @@ services:
   nexus-llm:
     image: ollama/ollama:latest
     container_name: nexus-llm
-    ports:
-      - "11434:11434"
+    # Ollama is internal-only; the API reaches it over nexus_bridge.
     environment:
       - OLLAMA_NUM_PARALLEL=1
       - OLLAMA_FLASH_ATTENTION=1
@@ -40,6 +39,8 @@ services:
     networks:
       - nexus_bridge
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s
@@ -89,7 +90,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     depends_on:
       nexus-api:
         condition: service_healthy
