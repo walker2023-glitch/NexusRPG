@@ -133,6 +133,8 @@ async def reconstruct(commit_id: str) -> dict[str, Any]:
         state = await asyncio.to_thread(engine.reconstruct_state, commit_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Commit not found: {commit_id}")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -188,6 +190,8 @@ async def checkout(commit_id: str, background_tasks: BackgroundTasks) -> Checkou
         meta = await asyncio.to_thread(engine.get_commit_metadata, commit_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Commit not found: {commit_id}")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except (KeyError, RuntimeError) as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
