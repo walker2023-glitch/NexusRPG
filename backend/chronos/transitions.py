@@ -18,7 +18,7 @@ _ALLOWED_OPS = frozenset({"add", "replace", "remove"})
 _MAX_OPERATIONS = 32
 _PROPERTY_PATH = re.compile(
     r"^/(nodes|edges)/(0|[1-9][0-9]*)/properties/"
-    r"[A-Za-z0-9_.-]+(?:/(?:[A-Za-z0-9_.-]+|-[^-]))*$"
+    r"[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+|/-)*$"
 )
 _METADATA_PATH = re.compile(r"^/metadata/[A-Za-z0-9_.-]+$")
 
@@ -60,6 +60,12 @@ def apply_state_transitions(
         path = operation.get("path")
         if op not in _ALLOWED_OPS:
             raise TransitionError(f"Transition {index} uses unsupported operation: {op!r}.")
+        allowed_keys = {"op", "path"} if op == "remove" else {"op", "path", "value"}
+        unexpected_keys = set(operation) - allowed_keys
+        if unexpected_keys:
+            raise TransitionError(
+                f"Transition {index} contains unsupported fields: {sorted(unexpected_keys)}."
+            )
         if not _is_allowed_path(path):
             raise TransitionError(f"Transition {index} uses a forbidden path: {path!r}.")
         if op != "remove" and "value" not in operation:
