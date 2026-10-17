@@ -2,7 +2,9 @@
 const nextConfig = {
   output: 'standalone',   // produces .next/standalone for the Docker runner stage
   experimental: {
-    // Server Actions are stable in Next 14; no flag needed — listed here for clarity
+    // Proxmox/LXC homelab compatibility: avoid spawning a Webpack worker during build.
+    // Next 14 enables this by default when no custom webpack config exists.
+    webpackBuildWorker: false,
   },
 }
 
