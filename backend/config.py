@@ -27,6 +27,10 @@ class Settings(BaseSettings):
         default="/data/axiom_rules.json",
         description="Path to the JSON file defining deterministic Axiom constraint rules.",
     )
+    frontend_origins: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000",
+        description="Comma-separated browser origins allowed to call the API.",
+    )
 
     model_config = {
         "env_file": ".env",

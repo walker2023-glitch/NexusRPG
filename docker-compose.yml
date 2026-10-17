@@ -64,6 +64,7 @@ services:
       - LANCEDB_PATH=/data/lancedb
       - CHRONOS_PATH=/data/chronos
       - AXIOM_RULES_PATH=/data/axiom_rules.json
+      - FRONTEND_ORIGINS=${FRONTEND_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     volumes:
       - nexus-lancedb:/data/lancedb
       - nexus-chronos:/data/chronos
