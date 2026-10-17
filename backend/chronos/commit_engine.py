@@ -315,7 +315,11 @@ class ChronosEngine:
         _validate_branch_name(branch_name)
         ref_path = self._refs_dir / branch_name
         if ref_path.exists():
-            return ref_path.read_text(encoding="utf-8").strip()
+            commit_id = ref_path.read_text(encoding="utf-8").strip()
+            _validate_commit_id(commit_id)
+            if commit_id not in self._index:
+                raise ValueError(f"Branch ref points to unknown commit: {commit_id}")
+            return commit_id
         return None
 
     def update_branch_tip(self, branch_name: str, commit_id: str) -> None:
