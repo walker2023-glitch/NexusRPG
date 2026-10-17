@@ -204,7 +204,7 @@ async def checkout(commit_id: str, background_tasks: BackgroundTasks) -> Checkou
     except (KeyError, RuntimeError) as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    background_tasks.add_task(ws.save, settings.world_state_path, state)
+    await ws.save(settings.world_state_path, state)
     logger.info("chronos /checkout → %s depth=%d", commit_id, meta["depth"])
 
     return CheckoutResponse(

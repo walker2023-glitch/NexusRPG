@@ -57,6 +57,20 @@ async def test_checkout_rejects_unsafe_commit_id(chronos_paths: None) -> None:
 
     assert exc_info.value.status_code == 400
 
+
+@pytest.mark.asyncio
+async def test_checkout_persists_before_return(chronos_paths: None) -> None:
+    created = await create_commit(
+        CommitRequest(scene_text="Persist this scene.")
+    )
+
+    await checkout(created.commit_id, BackgroundTasks())
+    persisted = await __import__("backend.world_state", fromlist=["load"]).load(
+        settings.world_state_path
+    )
+    assert persisted["metadata"]["universe"] == ""
+
+
 from pydantic import ValidationError
 
 from backend.routes.actor_router import SceneRequest
