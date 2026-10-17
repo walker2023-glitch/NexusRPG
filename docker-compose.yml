@@ -1,5 +1,4 @@
 services:
-  # ── Model bootstrap (run once with: make setup) ───────────────────────────
   nexus-llm-init:
     image: ollama/ollama:latest
     container_name: nexus-llm-init
@@ -24,11 +23,9 @@ services:
     networks:
       - nexus_bridge
 
-  # ── Ollama inference server ───────────────────────────────────────────────
   nexus-llm:
     image: ollama/ollama:latest
     container_name: nexus-llm
-    # Ollama is internal-only; the API reaches it over nexus_bridge.
     environment:
       - OLLAMA_NUM_PARALLEL=1
       - OLLAMA_FLASH_ATTENTION=1
@@ -46,7 +43,6 @@ services:
       retries: 5
       start_period: 30s
 
-  # ── FastAPI backend ───────────────────────────────────────────────────────
   nexus-api:
     build:
       context: ./backend
@@ -76,6 +72,8 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
+      # LanceDB requires AF_UNIX socketpair in nested Docker/LXC.
+      - seccomp:unconfined
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -83,9 +81,7 @@ services:
       retries: 5
       start_period: 20s
 
-  # ── Next.js frontend ──────────────────────────────────────────────────────
   nexus-frontend:
-    # Built and scanned by GitHub Actions; vault only pulls the runtime image.
     image: ghcr.io/walker2023-glitch/nexusrpg-frontend:main
     container_name: nexus-frontend
     ports:
@@ -101,7 +97,7 @@ services:
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch(\u0027http://localhost:3000/\u0027).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
