@@ -354,8 +354,10 @@ class ChronosEngine:
         branches: dict[str, str] = {}
         for ref_file in self._refs_dir.iterdir():
             if ref_file.is_file():
-                tip = ref_file.read_text(encoding="utf-8").strip()
-                branches[ref_file.name] = tip
+                _validate_branch_name(ref_file.name)
+                tip = self.get_branch_tip(ref_file.name)
+                if tip is not None:
+                    branches[ref_file.name] = tip
         return branches
 
     def prune_orphaned_branches(self) -> int:
