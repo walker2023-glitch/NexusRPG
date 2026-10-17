@@ -21,6 +21,52 @@ _EMPTY_STATE: dict[str, Any] = {
 }
 
 
+def validate_state(state: dict[str, Any]) -> None:
+    """Validate the stable graph envelope before it is read or persisted.
+
+    This intentionally validates structure and identifiers, not arbitrary node
+    properties, so imported worlds remain flexible while malformed graph data
+    cannot corrupt Chronos reconstruction or frontend rendering.
+    """
+    if not isinstance(state, dict):
+        raise ValueError("World state must be a JSON object.")
+
+    nodes = state.get("nodes", [])
+    edges = state.get("edges", [])
+    metadata = state.get("metadata", {})
+    if not isinstance(nodes, list):
+        raise ValueError("World state 'nodes' must be a list.")
+    if not isinstance(edges, list):
+        raise ValueError("World state 'edges' must be a list.")
+    if not isinstance(metadata, dict):
+        raise ValueError("World state 'metadata' must be an object.")
+
+    node_ids: set[str] = set()
+    for node in nodes:
+        if not isinstance(node, dict):
+            raise ValueError("Every world-state node must be an object.")
+        node_id = node.get("id")
+        if not isinstance(node_id, str) or not node_id or len(node_id) > 128:
+            raise ValueError("Every world-state node must have a non-empty string id of at most 128 characters.")
+        if node_id in node_ids:
+            raise ValueError(f"Duplicate world-state node id: {node_id}")
+        node_ids.add(node_id)
+
+    for edge in edges:
+        if not isinstance(edge, dict):
+            raise ValueError("Every world-state edge must be an object.")
+        for field in ("source", "target", "relation"):
+            value = edge.get(field)
+            if not isinstance(value, str) or not value or len(value) > 128:
+                raise ValueError(f"Every world-state edge must have a non-empty {field} string of at most 128 characters.")
+
+    campaign_id = metadata.get("campaign_id")
+    if campaign_id is not None and (
+        not isinstance(campaign_id, str) or not campaign_id or len(campaign_id) > 128
+    ):
+        raise ValueError("metadata.campaign_id must be a non-empty string of at most 128 characters.")
+
+
 def _empty_state() -> dict[str, Any]:
     """Return a fresh copy of the empty state template."""
     return json.loads(json.dumps(_EMPTY_STATE))
@@ -35,6 +81,7 @@ async def load(path: str) -> dict[str, Any]:
         async with aiofiles.open(path, mode="r", encoding="utf-8") as fh:
             raw = await fh.read()
         state: dict[str, Any] = json.loads(raw)
+        validate_state(state)
         logger.debug("world_state.load → %d nodes, %d edges from %s",
                      len(state.get("nodes", [])), len(state.get("edges", [])), path)
         return state
@@ -52,6 +99,7 @@ async def save(path: str, state: dict[str, Any]) -> None:
     Writing to a temp file first prevents corruption if the process is killed mid-write.
     The os.replace call is performed in a thread pool to avoid blocking the event loop.
     """
+    validate_state(state)
     tmp_path = path + ".tmp"
     serialised = json.dumps(state, ensure_ascii=False, indent=2)
     async with aiofiles.open(tmp_path, mode="w", encoding="utf-8") as fh:
