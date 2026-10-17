@@ -40,7 +40,11 @@ class SceneRequest(BaseModel):
     """Payload for generating the next narrative scene."""
 
     player_action: str = Field(
-        ..., min_length=1, description="What the player just did or said."
+        ...,
+        min_length=1,
+        max_length=4_000,
+        description="What the player just did or said.",
+
     )
     freytag_stage: FreytagStage = Field(
         default=FreytagStage.RISING_ACTION,
@@ -51,10 +55,12 @@ class SceneRequest(BaseModel):
     )
     scene_history: list[str] = Field(
         default_factory=list,
+        max_length=50,
         description="Ordered list of prior scene texts (oldest first) for compression.",
     )
     transition_operations: list[dict[str, Any]] = Field(
         default_factory=list,
+        max_length=32,
         description=(
             "Structured, allowlisted state operations from a trusted planner. "
             "Narrative prose is never treated as a state mutation."

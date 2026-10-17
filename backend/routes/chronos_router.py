@@ -34,10 +34,19 @@ def _engine() -> ChronosEngine:
 class CommitRequest(BaseModel):
     """Payload for recording a new narrative commit."""
 
-    scene_text: str = Field(..., description="Prose description of the current scene moment.")
+    scene_text: str = Field(
+        ...,
+        min_length=1,
+        max_length=100_000,
+        description="Prose description of the current scene moment.",
+    )
     parent_id: str | None = Field(None, description="Parent commit ID, or null for a root commit.")
-    choice_taken: str | None = Field(None, description="Player choice that led to this state.")
-    branch_label: str | None = Field(None, description="Optional human-readable branch name.")
+    choice_taken: str | None = Field(
+        None, max_length=2_000, description="Player choice that led to this state."
+    )
+    branch_label: str | None = Field(
+        None, max_length=128, description="Optional human-readable branch name."
+    )
     update_branch: str | None = Field(
         None,
         description="If provided, the named branch ref tip is advanced to the new commit.",

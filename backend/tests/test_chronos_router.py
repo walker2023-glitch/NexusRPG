@@ -56,3 +56,24 @@ async def test_checkout_rejects_unsafe_commit_id(chronos_paths: None) -> None:
         await checkout("../outside", BackgroundTasks())
 
     assert exc_info.value.status_code == 400
+
+from pydantic import ValidationError
+
+from backend.routes.actor_router import SceneRequest
+
+
+def test_request_sizes_are_bounded() -> None:
+    with pytest.raises(ValidationError):
+        CommitRequest(scene_text="x" * 100_001)
+
+    with pytest.raises(ValidationError):
+        SceneRequest(player_action="x" * 4_001)
+
+    with pytest.raises(ValidationError):
+        SceneRequest(player_action="go", scene_history=["scene"] * 51)
+
+    with pytest.raises(ValidationError):
+        SceneRequest(
+            player_action="go",
+            transition_operations=[{"op": "add", "path": "/metadata/active_location", "value": "x"}] * 33,
+        )
