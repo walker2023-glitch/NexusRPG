@@ -72,8 +72,8 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-      # LanceDB requires AF_UNIX socketpair in nested Docker/LXC.
-      - seccomp:unconfined
+      # LanceDB requires AF_UNIX socketpair under Docker's default AppArmor profile.
+      - apparmor=unconfined
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
